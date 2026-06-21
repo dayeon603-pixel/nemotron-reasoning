@@ -94,7 +94,9 @@ def to_text(rec: dict) -> str:
 
 def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dict:
     import torch
-    bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    # NOTE: is_bf16_supported() returns True on a T4 via emulation, so check the
+    # GPU compute capability directly. Native bf16 needs sm_80+ (Ampere). T4 is 7.5.
+    bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
     compute_dtype = torch.bfloat16 if bf16_ok else torch.float16  # T4 has no bf16
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model
