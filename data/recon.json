@@ -1,0 +1,145 @@
+{
+  "total": 9500,
+  "gaps": [
+    "COVERAGE SUMMARY: 4733 rows covered by known generators, 4767 rows uncovered.",
+    "UNCOVERED FAMILY: 4767 rows match no generator domain. Answer formats: float=3191, roman=1576. Sample ids: ['001b24c4', '00208201', '0040ff76']. Top template: \"in alice's wonderland, the gravitational constant has been secretly changed. here are some example observations : for t = <NUM>s, distance =\"",
+    "FORMAT GAP [linear_eq]: real answers include ['binary', 'other'] but generator only emits ['float', 'int']. Counts: {'other': 868, 'int': 667, 'binary': 20}. ACTION: add generator variants that produce ['binary', 'other'] for 'linear_eq'.",
+    "NOT SEEN: generator domain 'roman' has 0 rows in this train set (may still appear in the hidden test).",
+    "NOT SEEN: generator domain 'number_seq' has 0 rows in this train set (may still appear in the hidden test).",
+    "NOT SEEN: generator domain 'list_ops' has 0 rows in this train set (may still appear in the hidden test).",
+    "FORMAT GAP [modular_arith]: real answers include ['phrase'] but generator only emits ['int']. Counts: {'phrase': 2}. ACTION: add generator variants that produce ['phrase'] for 'modular_arith'."
+  ],
+  "domains": {
+    "binary_ops": {
+      "count": 1602,
+      "answer_formats": {
+        "binary": 1602
+      },
+      "binary_widths": {
+        "8": 1602
+      },
+      "distinct_templates": 1,
+      "top_templates": [
+        [
+          "in alice's wonderland, a secret bit manipulation rule transforms <NUM>-bit binary numbers. the transformation involves operations like bit s",
+          1602
+        ]
+      ]
+    },
+    "cipher": {
+      "count": 1574,
+      "answer_formats": {
+        "phrase": 1574
+      },
+      "binary_widths": {},
+      "distinct_templates": 1574,
+      "top_templates": [
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : ucoov pwgtfyoqg vorq yrjjoe : queen discovers near",
+          1
+        ],
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : wkgqa lsrqaq wneeke : mouse chases mirror wkgqa nw",
+          1
+        ],
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : hmxad apdhvdq vid ohexahm apwqvhm : alice creates ",
+          1
+        ],
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : xkffmh chmkfmn ewhmnf : hatter creates forest hkyy",
+          1
+        ],
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : wfmkg gajifbgk vdkqig : mouse explores castle yuel",
+          1
+        ]
+      ]
+    },
+    "uncovered": {
+      "count": 4767,
+      "answer_formats": {
+        "roman": 1576,
+        "float": 3191
+      },
+      "binary_widths": {},
+      "distinct_templates": 262,
+      "top_templates": [
+        [
+          "in alice's wonderland, the gravitational constant has been secretly changed. here are some example observations : for t = <NUM>s, distance =",
+          1597
+        ],
+        [
+          "in alice's wonderland, a secret unit conversion is applied to measurements. for example : <NUM> m becomes <NUM> <NUM> m becomes <NUM> <NUM> ",
+          1594
+        ],
+        [
+          "in alice's wonderland, numbers are secretly converted into a different numeral system. some examples are given below : <NUM> : xxiii <NUM> :",
+          24
+        ],
+        [
+          "in alice's wonderland, numbers are secretly converted into a different numeral system. some examples are given below : <NUM> : lxxviii <NUM>",
+          24
+        ],
+        [
+          "in alice's wonderland, numbers are secretly converted into a different numeral system. some examples are given below : <NUM> : lxxxvi <NUM> ",
+          24
+        ]
+      ]
+    },
+    "linear_eq": {
+      "count": 1555,
+      "answer_formats": {
+        "other": 868,
+        "int": 667,
+        "binary": 20
+      },
+      "binary_widths": {
+        "2": 9,
+        "3": 10,
+        "4": 1
+      },
+      "distinct_templates": 1144,
+      "top_templates": [
+        [
+          "in alice's wonderland, a secret set of transformation rules is applied to equations. below are a few examples : <NUM><NUM> = <NUM> <NUM><NUM",
+          53
+        ],
+        [
+          "in alice's wonderland, a secret set of transformation rules is applied to equations. below are a few examples : <NUM>+<NUM> = <NUM> <NUM>+<N",
+          38
+        ],
+        [
+          "in alice's wonderland, a secret set of transformation rules is applied to equations. below are a few examples : <NUM><NUM> = <NUM> <NUM>+<NU",
+          37
+        ],
+        [
+          "in alice's wonderland, a secret set of transformation rules is applied to equations. below are a few examples : <NUM>*<NUM> = <NUM> <NUM>*<N",
+          33
+        ],
+        [
+          "in alice's wonderland, a secret set of transformation rules is applied to equations. below are a few examples : <NUM>*<NUM> = <NUM> <NUM><NU",
+          31
+        ]
+      ]
+    },
+    "modular_arith": {
+      "count": 2,
+      "answer_formats": {
+        "phrase": 2
+      },
+      "binary_widths": {},
+      "distinct_templates": 2,
+      "top_templates": [
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : mduyzg foof azdofp : dragon sees forest rgeyjp dou",
+          1
+        ],
+        [
+          "in alice's wonderland, secret encryption rules are used on text. here are some examples : wyk ogdwklubxd obxdk clmtd : the mysterious mouse ",
+          1
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,70 @@
+# Nemotron Reasoning Challenge — SFT training configuration
+# All values are read by src/sft_train.py via TrainConfig.
+
+# ── model ─────────────────────────────────────────────────────────────────────
+model_kaggle_id: "metric/nemotron-3-nano-30b-a3b-bf16/transformers/default"
+
+# ── data ──────────────────────────────────────────────────────────────────────
+data_jsonl: "data/accepted.jsonl"
+
+# ── outputs ───────────────────────────────────────────────────────────────────
+output_dir: "outputs/lora_adapter"
+submission_zip: "submission.zip"
+
+# ── reproducibility ───────────────────────────────────────────────────────────
+seed: 42
+
+# ── LoRA ─────────────────────────────────────────────────────────────────────
+# lora_r MUST be <= 32 (challenge constraint).
+lora_r: 32
+# lora_alpha / lora_r = scale; 64/32 = 2.0 (recommended for supervised fine-tune).
+lora_alpha: 64
+lora_dropout: 0.05
+
+# ACTIVE: attention-only targets — guaranteed loadable by vLLM's NemotronH LoRA
+# allowlist. Do NOT target Mamba in_proj/out_proj (silent no-op; see sft_train.py).
+# lora_target_modules takes priority over lora_target_regex when non-empty.
+# CAPACITY RUN: attention + MLP projections. Attention-only (6/52 layers) had
+# near-zero effect (scored 0.54 = baseline). Adding gate/up/down_proj gives the
+# adapter real capacity. RISK: the scorer's vLLM may not load LoRA on MoE-expert
+# layers; if the submission ERRORs, revert to attention-only.
+lora_target_modules:
+  - "q_proj"
+  - "k_proj"
+  - "v_proj"
+  - "o_proj"
+  - "gate_proj"
+  - "up_proj"
+  - "down_proj"
+
+# ALTERNATE (attn+MLP) — only if vLLM smoke test in run_modal.py confirms it
+# loads without error. MoE-expert LoRA (gate/up/down_proj) may not be accepted
+# by the scorer's vLLM build. To activate: clear lora_target_modules above and
+# uncomment the regex below.
+# lora_target_regex: ".*\\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"
+
+# Fallback regex (attention-only) — used only when lora_target_modules is empty.
+lora_target_regex: ".*\\.(q_proj|k_proj|v_proj|o_proj)$"
+
+# ── sequence ──────────────────────────────────────────────────────────────────
+# Our reasoning traces are short (<=~512 tokens). 2048 covers them with margin
+# and keeps per-step compute/memory low so the run finishes in time. This is a
+# TRAINING cap only; it does not affect the scorer's 7680 generation budget.
+max_length: 2048
+
+# ── training ──────────────────────────────────────────────────────────────────
+per_device_batch: 1
+grad_accum_steps: 8       # effective batch = 8; scale up with multi-GPU
+# 2 epochs on the FULL real-distribution data (push run toward 0.7+). Disable
+# gradient checkpointing on the 141GB H200 for ~2x speed so 2 epochs fit in time.
+num_epochs: 2
+gradient_checkpointing: false
+# rank-32 LoRA: standard 1e-4 LR, cosine-decayed after a short warmup.
+lr: 1.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.03
+max_grad_norm: 1.0
+bf16: true
+
+logging_steps: 10
+save_steps: 100

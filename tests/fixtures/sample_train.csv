@@ -1,0 +1,8 @@
+id,prompt,answer
+00066667,"In Alice's Wonderland, a secret bit manipulation rule transforms 8-bit binary numbers. The transformation maps inputs to outputs. Examples: 00110100 -> 11001011, 10101010 -> 01010101. Query input: 01101000",10010111
+000b53cf,"In Alice's Wonderland, a secret bit manipulation rule transforms 8-bit binary numbers. The transformation maps inputs to outputs. Examples: 11111111 -> 00000000, 00001111 -> 11110000. Query input: 10111100",01000011
+00189f6a,"In Alice's Wonderland, secret encryption rules are used on text. Here are some examples: ucoov pwgtf -> dog runs fast, ngvvgt -> letter. Query input: ecv kocikpgu dqqm",cat imagines book
+001b24c4,"In Alice's Wonderland, numbers are written using a roman numeral rule. Examples: 12 -> XII, 27 -> XXVII. Query input: 38",XXXVIII
+001c63cb,"In Alice's Wonderland, secret encryption rules are used on text. Here are some examples: xbsf -> ward, dsfbuf -> create. Query input: xjabse dsfbuft tfdsfu",wizard creates secret
+00200abc,"In Alice's Wonderland, a hidden equation rule maps an input number to an output. Examples: 3 -> 11, 5 -> 17, 2 -> 8. Solve for the query input: 7",23
+00211def,"In Alice's Wonderland, a hidden equation rule maps an input number to an output. Examples: 4 -> 14, 6 -> 20. Solve for the query input: 10",32

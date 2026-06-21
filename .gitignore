@@ -1,0 +1,20 @@
+# large binaries / artifacts (never commit)
+*.zip
+*.safetensors
+*.tar.gz
+*.bin
+outputs/
+# data (derived / large / raw competition data)
+data/raw/
+data/*.jsonl
+data/*.csv
+data/competition/
+# caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+# local env
+.env
+*.egg-info/
