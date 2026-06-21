@@ -94,6 +94,8 @@ def to_text(rec: dict) -> str:
 
 def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dict:
     import torch
+    bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    compute_dtype = torch.bfloat16 if bf16_ok else torch.float16  # T4 has no bf16
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model
     from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
@@ -107,7 +109,7 @@ def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dic
     ds = ds.map(lambda b: tok(b["text"], truncation=True, max_length=MAX_LEN), remove_columns=["text"])
 
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                             bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
+                             bnb_4bit_compute_dtype=compute_dtype, bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, quantization_config=bnb, device_map="auto")
     model.gradient_checkpointing_enable()
     model = get_peft_model(model, LoraConfig(
@@ -117,7 +119,7 @@ def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dic
     args = TrainingArguments(
         output_dir=f"experiments/_ckpt_{source_name}_{len(train_recs)}",
         per_device_train_batch_size=4, gradient_accumulation_steps=4,
-        num_train_epochs=EPOCHS, learning_rate=LR, bf16=True,
+        num_train_epochs=EPOCHS, learning_rate=LR, bf16=bf16_ok, fp16=not bf16_ok,
         logging_steps=20, save_strategy="no", report_to=[])
     Trainer(model=model, args=args, train_dataset=ds,
             data_collator=DataCollatorForLanguageModeling(tok, mlm=False)).train()
