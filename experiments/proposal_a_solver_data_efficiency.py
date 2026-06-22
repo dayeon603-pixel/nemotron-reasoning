@@ -31,11 +31,11 @@ log = logging.getLogger("proposalA")
 
 # ── config ──────────────────────────────────────────────────────────────────
 MODEL_ID = "Qwen/Qwen2.5-1.5B"        # open, no gating, fits 4-bit on 16GB
-FAMILY = "gravitational"               # has a 100%-correct solver in this repo
+FAMILY = "numeral"               # has a 100%-correct solver in this repo
 N_TRAIN_BUDGETS = [200, 500, 1000]     # training-set sizes to sweep
 N_TEST = 200                           # held-out test size (solver-generated)
 MAX_LEN = 512                          # traces are short
-EPOCHS = 1
+EPOCHS = 3
 LR = 2e-4
 SEED = 42
 OUT = Path("experiments/proposal_a_results.json")
@@ -58,9 +58,16 @@ def ensure_deps() -> None:
 def build_datasets() -> tuple[list[dict], list[dict], list[dict]]:
     """Return (solver_train_pool, real_train_pool, test_set) as {prompt, answer} dicts."""
     sys.path.insert(0, str(Path.cwd()))
-    from src.solvers.exact import GravitationalSolver  # noqa: E402
+    from src.solvers.exact import (GravitationalSolver, NumeralSolver,  # noqa: E402
+                                   UnitConversionSolver)
 
-    solver = GravitationalSolver()
+    _SOLVERS = {"gravitational": GravitationalSolver,
+                "unit_conversion": UnitConversionSolver, "numeral": NumeralSolver}
+    _PREFIXES = {"gravitational": "in alice's wonderland, the gravitational",
+                 "unit_conversion": "in alice's wonderland, a secret unit conversion",
+                 "numeral": "in alice's wonderland, numbers are secretly converted"}
+    solver = _SOLVERS[FAMILY]()
+    prefix = _PREFIXES[FAMILY]
 
     # Solver-synthetic pool (zero label noise) and a held-out test set.
     pool = [{"prompt": e.prompt, "answer": e.answer} for e in solver.generate(max(N_TRAIN_BUDGETS), seed=SEED)]
@@ -75,9 +82,9 @@ def build_datasets() -> tuple[list[dict], list[dict], list[dict]]:
         with csv.open() as fh:
             for row in _csv.DictReader(fh):
                 p = row.get("prompt", "")
-                if p.lower().startswith("in alice's wonderland, the gravitational"):
+                if p.lower().startswith(prefix):
                     real.append({"prompt": p, "answer": str(row.get("answer", "")).strip()})
-        log.info("Loaded %d real gravitational rows from %s", len(real), csv)
+        log.info("Loaded %d real %s rows from %s", len(real), FAMILY, csv)
     if not real:
         log.warning("No real train.csv found; 'real' arm will reuse a disjoint solver split.")
         real = [{"prompt": e.prompt, "answer": e.answer} for e in solver.generate(max(N_TRAIN_BUDGETS), seed=SEED + 1)]
