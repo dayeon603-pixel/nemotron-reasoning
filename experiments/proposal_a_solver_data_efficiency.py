@@ -36,6 +36,7 @@ N_TRAIN_BUDGETS = [200, 500, 1000]     # training-set sizes to sweep
 N_TEST = 200                           # held-out test size (solver-generated)
 MAX_LEN = 512                          # traces are short
 EPOCHS = 3
+NOISE_RATE = 0.3                       # fraction of noisy-arm labels corrupted
 LR = 2e-4
 SEED = 42
 OUT = Path("experiments/proposal_a_results.json")
@@ -74,22 +75,25 @@ def build_datasets() -> tuple[list[dict], list[dict], list[dict]]:
     test = [{"prompt": e.prompt, "answer": e.answer} for e in solver.generate(N_TEST, seed=SEED + 9999)]
 
     # Real pool from competition train.csv if present (else fall back to solver).
-    real: list[dict] = []
-    csv = next(iter(Path("data/raw").glob("train.csv")), None)
-    if csv is not None:
-        import csv as _csv
-
-        with csv.open() as fh:
-            for row in _csv.DictReader(fh):
-                p = row.get("prompt", "")
-                if p.lower().startswith(prefix):
-                    real.append({"prompt": p, "answer": str(row.get("answer", "")).strip()})
-        log.info("Loaded %d real %s rows from %s", len(real), FAMILY, csv)
-    if not real:
-        log.warning("No real train.csv found; 'real' arm will reuse a disjoint solver split.")
-        real = [{"prompt": e.prompt, "answer": e.answer} for e in solver.generate(max(N_TRAIN_BUDGETS), seed=SEED + 1)]
-
-    return pool, real, test
+    # Noisy arm: identical prompts, but NOISE_RATE of the answers are corrupted to
+    # a wrong value (a different valid answer). This simulates the label noise of
+    # unfiltered teacher/LLM-distilled data and isolates the zero-label-noise
+    # advantage of solver data. The TEST set stays clean.
+    import random as _r
+    _rng = _r.Random(SEED + 7)
+    _answers = [r["answer"] for r in pool]
+    noisy: list[dict] = []
+    for r in pool:
+        if _rng.random() < NOISE_RATE:
+            wrong = _rng.choice(_answers)
+            while wrong == r["answer"]:
+                wrong = _rng.choice(_answers)
+            noisy.append({"prompt": r["prompt"], "answer": wrong})
+        else:
+            noisy.append(dict(r))
+    log.info("Noisy arm built: %d rows, %.0f%% labels corrupted", len(noisy), 100 * NOISE_RATE)
+    _ = prefix  # (real-data loader retained in git history; not used in noisy mode)
+    return pool, noisy, test
 
 
 PROMPT_SUFFIX = "\nPut your final answer inside \\boxed{}."
@@ -155,11 +159,11 @@ def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dic
 def main() -> None:
     random.seed(SEED)
     ensure_deps()
-    solver_pool, real_pool, test = build_datasets()
+    clean_pool, noisy_pool, test = build_datasets()
     results = []
     for n in N_TRAIN_BUDGETS:
-        results.append(train_one("solver_synthetic", solver_pool[:n], test))
-        results.append(train_one("real", real_pool[:n], test))
+        results.append(train_one("clean_solver", clean_pool[:n], test))
+        results.append(train_one("noisy_%dpct" % int(NOISE_RATE * 100), noisy_pool[:n], test))
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(json.dumps(results, indent=2))
     log.info("\n=== RESULTS (accuracy vs training size) ===")
