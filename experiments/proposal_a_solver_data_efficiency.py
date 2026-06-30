@@ -33,10 +33,10 @@ log = logging.getLogger("proposalA")
 MODEL_ID = "Qwen/Qwen2.5-1.5B"        # open, no gating, fits 4-bit on 16GB
 FAMILY = "numeral"               # has a 100%-correct solver in this repo
 N_TRAIN_BUDGETS = [200, 500, 1000]     # training-set sizes to sweep
-N_TEST = 200                           # held-out test size (solver-generated)
+N_TEST = 100                           # held-out test size (smaller = faster sweep)
 MAX_LEN = 512                          # traces are short
 EPOCHS = 3
-NOISE_RATE = 0.3                       # fraction of noisy-arm labels corrupted
+NOISE_RATES = [0.0, 0.1, 0.2, 0.3, 0.5]  # label-noise sweep (0.0 = clean)
 LR = 2e-4
 SEED = 42
 OUT = Path("experiments/proposal_a_results.json")
@@ -75,25 +75,8 @@ def build_datasets() -> tuple[list[dict], list[dict], list[dict]]:
     test = [{"prompt": e.prompt, "answer": e.answer} for e in solver.generate(N_TEST, seed=SEED + 9999)]
 
     # Real pool from competition train.csv if present (else fall back to solver).
-    # Noisy arm: identical prompts, but NOISE_RATE of the answers are corrupted to
-    # a wrong value (a different valid answer). This simulates the label noise of
-    # unfiltered teacher/LLM-distilled data and isolates the zero-label-noise
-    # advantage of solver data. The TEST set stays clean.
-    import random as _r
-    _rng = _r.Random(SEED + 7)
-    _answers = [r["answer"] for r in pool]
-    noisy: list[dict] = []
-    for r in pool:
-        if _rng.random() < NOISE_RATE:
-            wrong = _rng.choice(_answers)
-            while wrong == r["answer"]:
-                wrong = _rng.choice(_answers)
-            noisy.append({"prompt": r["prompt"], "answer": wrong})
-        else:
-            noisy.append(dict(r))
-    log.info("Noisy arm built: %d rows, %.0f%% labels corrupted", len(noisy), 100 * NOISE_RATE)
-    _ = prefix  # (real-data loader retained in git history; not used in noisy mode)
-    return pool, noisy, test
+    _ = prefix  # noqa: F841 (kept for the real-data loader path)
+    return pool, test
 
 
 PROMPT_SUFFIX = "\nPut your final answer inside \\boxed{}."
@@ -101,6 +84,24 @@ PROMPT_SUFFIX = "\nPut your final answer inside \\boxed{}."
 
 def to_text(rec: dict) -> str:
     return f"{rec['prompt']}{PROMPT_SUFFIX} \\boxed{{{rec['answer']}}}"
+
+
+def corrupt(pool: list[dict], rate: float, seed: int) -> list[dict]:
+    """Return a copy of pool with `rate` fraction of answers replaced by a wrong
+    (but valid) answer. Simulates label noise from unfiltered teacher data."""
+    import random as _r
+    rng = _r.Random(seed)
+    answers = [r["answer"] for r in pool]
+    out: list[dict] = []
+    for r in pool:
+        if rate > 0 and rng.random() < rate:
+            wrong = rng.choice(answers)
+            while wrong == r["answer"]:
+                wrong = rng.choice(answers)
+            out.append({"prompt": r["prompt"], "answer": wrong})
+        else:
+            out.append(dict(r))
+    return out
 
 
 def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dict:
@@ -159,13 +160,17 @@ def train_one(source_name: str, train_recs: list[dict], test: list[dict]) -> dic
 def main() -> None:
     random.seed(SEED)
     ensure_deps()
-    clean_pool, noisy_pool, test = build_datasets()
+    clean_pool, test = build_datasets()
     results = []
-    for n in N_TRAIN_BUDGETS:
-        results.append(train_one("clean_solver", clean_pool[:n], test))
-        results.append(train_one("noisy_%dpct" % int(NOISE_RATE * 100), noisy_pool[:n], test))
-        OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_text(json.dumps(results, indent=2))
+    for rate in NOISE_RATES:
+        pool_r = corrupt(clean_pool, rate, SEED + 7)
+        label = "clean" if rate == 0 else ("noisy_%dpct" % int(rate * 100))
+        for n in N_TRAIN_BUDGETS:
+            r = train_one(label, pool_r[:n], test)
+            r["noise_rate"] = rate
+            results.append(r)
+            OUT.parent.mkdir(parents=True, exist_ok=True)
+            OUT.write_text(json.dumps(results, indent=2))
     log.info("\n=== RESULTS (accuracy vs training size) ===")
     for r in results:
         log.info("%-18s n=%-5d acc=%.3f", r["source"], r["n_train"], r["accuracy"])
